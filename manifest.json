@@ -2,14 +2,25 @@
   "manifest_version": 3,
   "name": "Smart Download Sorter v3",
   "version": "3.0",
-  "description": "Organizes downloads into site+date folders with nested subfolders, favicons, notifications, and logs.",
-  "permissions": ["downloads", "tabs", "storage", "notifications", "scripting"],
-  "background": { "service_worker": "background.js" },
+  "description": "Organizes downloads into Domain/Date/FileType folders with logs and notifications.",
+  "permissions": [
+    "downloads",
+    "tabs",
+    "storage",
+    "notifications",
+    "scripting"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"]
     }
   ],
-  "options_page": "options.html"
+  "options_page": "options.html",
+  "icons": {
+    "48": "icon.png"
+  }
 }

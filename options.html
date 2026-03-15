@@ -1,41 +1,42 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Smart Download Sorter Options</title>
-<link rel="stylesheet" href="options.css">
+  <meta charset="UTF-8">
+  <title>Smart Download Sorter Options</title>
+  <link rel="stylesheet" href="options.css">
 </head>
 <body>
-<div class="container">
+  <div class="container">
     <h1>Smart Download Sorter Settings</h1>
-
+    
     <div class="setting">
-        <label>Folder naming pattern:
-            <select id="folderPattern">
-                <option value="domain_date">Domain + Date</option>
-                <option value="domain">Domain Only</option>
-                <option value="date_domain">Date + Domain</option>
-            </select>
-        </label>
+      <label for="folderPattern">Folder naming pattern:</label>
+      <select id="folderPattern">
+        <option value="domain_date">Domain + Date (default)</option>
+        <option value="domain_only">Domain Only</option>
+        <option value="date_domain">Date + Domain</option>
+      </select>
     </div>
-
+    
     <div class="setting">
-        <label>Enable nested subfolders:
-            <input type="checkbox" id="nestedSubfolders" checked>
-        </label>
+      <label>
+        <input type="checkbox" id="nestedSubfolders">
+        Enable nested subfolders (FileType)
+      </label>
     </div>
-
+    
     <div class="setting">
-        <label>Enable notifications:
-            <input type="checkbox" id="notifications" checked>
-        </label>
+      <label>
+        <input type="checkbox" id="notifications">
+        Enable notifications
+      </label>
     </div>
-
+    
     <h2>Download Log</h2>
     <ul id="downloadLog"></ul>
     <button id="clearLog">Clear Log</button>
-</div>
-
-<script src="options.js"></script>
+  </div>
+  
+  <script src="options.js"></script>
 </body>
 </html>
