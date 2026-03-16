@@ -1,6 +1,6 @@
 // Sends domain + favicon to background when download is likely to start
 document.addEventListener('click', e => {
-    const target = e.target.closest('a[download], a[href]');
+    const target = e.target.closest('a[download]');
     if (!target) return;
 
     const domain = location.hostname;

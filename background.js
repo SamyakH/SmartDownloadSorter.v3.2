@@ -23,19 +23,48 @@ const fileTypeMap = {
 chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
   try {
     // Try to use tab URL if possible
+    let domainToUse = lastDomain || 'Unknown';
+    let faviconToUse = lastFavicon || '';
+    
     if (downloadItem.tabId >= 0) {
-      chrome.tabs.get(downloadItem.tabId, tab => {
-        if (chrome.runtime.lastError) {
-          processDownload(downloadItem, suggest, lastDomain || 'Unknown', lastFavicon || '');
+      chrome.tabs.get(downloadItem.tabId, (tab) => {
+        if (chrome.runtime.lastError || !tab || !tab.url) {
+          // Fallback on error/no tab
+          processDownload(downloadItem, suggest, domainToUse, faviconToUse);
           return;
         }
-        const domain = tab.url ? (new URL(tab.url).hostname) : (lastDomain || 'Unknown');
-        const faviconUrl = lastFavicon || '';
-        processDownload(downloadItem, suggest, domain, faviconUrl);
+        try {
+          const urlObj = new URL(tab.url);
+          domainToUse = urlObj.hostname;
+        } catch (e) {
+          // Invalid URL
+        }
+        faviconToUse = lastFavicon || '';
+        // Load user prefs for dynamic path
+        chrome.storage.sync.get({
+          folderPattern: 'domain_date',
+          nestedSubfolders: true
+        }, (prefs) => {
+          processDownload(downloadItem, suggest, domainToUse, faviconToUse, prefs);
+        });
       });
     } else {
-      // Fallback for non-tab downloads
-      processDownload(downloadItem, suggest, lastDomain || 'Unknown', lastFavicon || '');
+      // Fallback for non-tab downloads or URL fallback
+      if (downloadItem.finalUrl) {
+        try {
+          const urlObj = new URL(downloadItem.finalUrl);
+          domainToUse = urlObj.hostname;
+        } catch (e) {
+          // Invalid URL
+        }
+      }
+      // Load user prefs for dynamic path
+      chrome.storage.sync.get({
+        folderPattern: 'domain_date',
+        nestedSubfolders: true
+      }, (prefs) => {
+        processDownload(downloadItem, suggest, domainToUse, faviconToUse, prefs);
+      });
     }
   } catch (err) {
     console.error('Download error:', err);
@@ -43,12 +72,16 @@ chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
   }
 });
 
-function processDownload(downloadItem, suggest, domain, faviconUrl) {
-  const date = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+function sanitize(str) {
+  return str.replace(/[<>:"/\\\\|?*]/g, '_').substring(0, 100);
+}
+
+function processDownload(downloadItem, suggest, domain, faviconUrl, prefs = {}) {
+  const dateStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
   
   // Determine file type folder
   let typeFolder = 'Others';
-  const ext = downloadItem.filename.split('.').pop().toLowerCase();
+  const ext = downloadItem.filename.split('.').pop()?.toLowerCase() || '';
   for (const [folder, exts] of Object.entries(fileTypeMap)) {
     if (exts.includes(ext)) {
       typeFolder = folder;
@@ -56,43 +89,62 @@ function processDownload(downloadItem, suggest, domain, faviconUrl) {
     }
   }
 
-  const filename = downloadItem.filename.split(/[/\\]/).pop();
+  const safeDomain = sanitize(domain);
+  const safeFilename = sanitize(downloadItem.filename.split(/[/\\\\]/).pop() || 'unknown');
   
-  // STRUCTURE: Domain / Date / FileType / Filename
-  const newPath = `${domain}/${date}/${typeFolder}/${filename}`;
+  // Build dynamic path based on prefs
+  const parts = [];
+  switch (prefs.folderPattern || 'domain_date') {
+    case 'domain_only':
+      parts.push(safeDomain);
+      break;
+    case 'date_domain':
+      parts.push(dateStr, safeDomain);
+      break;
+    default: // domain_date
+      parts.push(safeDomain, dateStr);
+  }
+  if (prefs.nestedSubfolders !== false) {
+    parts.push(typeFolder);
+  }
+  parts.push(safeFilename);
+  
+  const newPath = parts.join('/');
 
   // Suggest filename with conflict handling
   suggest({ filename: newPath, conflictAction: 'uniquify' });
 
   // Store in download log
-  chrome.storage.local.get({ log: [] }, data => {
-    const log = data.log || [];
-    log.push({
-      filename,
-      domain,
-      folder: `${domain}/${date}/${typeFolder}`,
-      typeFolder,
-      date: new Date().toISOString(),
-      time: new Date().toLocaleTimeString(),
-      url: downloadItem.finalUrl || downloadItem.url || '',
-      tabId: downloadItem.tabId || null,
-      favicon: faviconUrl,
-      fileSize: downloadItem.fileSize || 0,
-      status: downloadItem.state || 'in_progress'
+    chrome.storage.local.get({ log: [] }, data => {
+      const log = data.log || [];
+      log.push({
+        filename: safeFilename,
+        domain: safeDomain,
+        folder: parts.slice(0, -1).join('/'),
+        typeFolder,
+        date: new Date().toISOString(),
+        time: new Date().toLocaleTimeString(),
+        url: downloadItem.finalUrl || downloadItem.url || '',
+        tabId: downloadItem.tabId || null,
+        favicon: faviconUrl,
+        fileSize: downloadItem.fileSize || 0,
+        status: downloadItem.state || 'in_progress'
+      });
+      // Keep log manageable (last 100 entries)
+      if (log.length > 100) log.shift();
+      chrome.storage.local.set({ log }, () => {
+        console.log('Download log saved');
+      });
     });
-    // Keep log manageable (last 100 entries)
-    if (log.length > 100) log.shift();
-    chrome.storage.local.set({ log });
-  });
 
-  // Show notification (Fixed: added notificationId as first parameter)
-  chrome.storage.sync.get({ notifications: true }, prefs => {
-    if (prefs.notifications) {
+  // Show notification
+  chrome.storage.sync.get({ notifications: true }, notifPrefs => {
+    if (notifPrefs.notifications) {
       chrome.notifications.create('dl-notify-' + Date.now(), {
         type: "basic",
         iconUrl: "icon.png",
         title: "Download Organized",
-        message: `Saved: ${domain}/${date}/${typeFolder}`
+        message: `Saved to: ${newPath.substring(0, 50)}...`
       });
     }
   });

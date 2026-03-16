@@ -40,24 +40,24 @@ function renderLog() {
     // Show newest first
     data.log.slice().reverse().forEach(item => {
       const li = document.createElement('li');
-      // Fixed template literal syntax
       li.innerHTML = `
         <img src="${item.favicon || 'icon.png'}" width="16" height="16" onerror="this.style.display='none'"> 
-        <strong>${item.filename}</strong><br>
-        <small>📁 ${item.folder}</small> | 
-        <small>📂 ${item.typeFolder}</small> | 
-        <small>🌐 ${item.domain}</small> | 
-        <small>📅 ${new Date(item.date).toLocaleDateString()} ${item.time}</small> | 
-        <small>💾 ${item.fileSize} bytes</small><br>
-        <a href="${item.url}" target="_blank">🔗 Source</a> | Status: ${item.status}
+        <strong>${item.filename || 'Unknown'}</strong><br>
+        <small>📁 ${item.folder || 'N/A'}</small> | 
+        <small>📂 ${item.typeFolder || 'Others'}</small> | 
+        <small>🌐 ${item.domain || 'Unknown'}</small> | 
+        <small>📅 ${item.date ? new Date(item.date).toLocaleDateString() : 'N/A'} ${item.time || ''}</small> | 
+        <small>💾 ${(item.fileSize || 0).toLocaleString()} bytes</small><br>
+        ${item.url ? `<a href="${item.url}" target="_blank">🔗 Source</a>` : ''} | Status: ${item.status || 'unknown'}
       `;
       downloadLog.appendChild(li);
-    });
+  });
   });
 }
 
-// Initial render
+// Initial render + auto-refresh
 renderLog();
+setInterval(renderLog, 5000);
 
 // Clear log button
 if (clearLogBtn) {
