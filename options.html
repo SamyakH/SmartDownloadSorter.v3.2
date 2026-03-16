@@ -9,32 +9,35 @@
   <div class="container">
     <h1>Smart Download Sorter Settings</h1>
     
-    <div class="setting">
+      <div class="setting">
       <label for="folderPattern">Folder naming pattern:</label>
       <select id="folderPattern">
         <option value="domain_date">Domain + Date (default)</option>
         <option value="domain_only">Domain Only</option>
         <option value="date_domain">Date + Domain</option>
       </select>
+      <small>
+        Examples:<br>
+        • Domain + Date: [SiteName]/YYYY-MM-DD[/FileType]/filename<br>
+        • Domain Only: [SiteName][/FileType]/filename<br>
+        • Date + Domain: YYYY-MM-DD/[SiteName][/FileType]/filename
+      </small>
     </div>
-    
+
     <div class="setting">
       <label>
         <input type="checkbox" id="nestedSubfolders">
         Enable nested subfolders (FileType)
       </label>
+      <small>
+        When enabled, files are grouped into types like Images, PDFs, Videos, Documents, etc.
+      </small>
     </div>
     
-    <div class="setting">
-      <label>
-        <input type="checkbox" id="notifications">
-        Enable notifications
-      </label>
-    </div>
-    
-    <h2>Download Log</h2>
+     <h2>Download Log</h2>
     <ul id="downloadLog"></ul>
     <button id="clearLog">Clear Log</button>
+    <button id="exportLog">Export Log as JSON</button>
   </div>
   
   <script src="options.js"></script>
