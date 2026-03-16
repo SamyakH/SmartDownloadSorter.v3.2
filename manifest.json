@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Smart Download Sorter v3",
-  "version": "3.4",
+  "version": "Final",
   "description": "Organizes downloads into Domain/Date/FileType folders with logs and notifications.",
   "permissions": [
     "downloads",
