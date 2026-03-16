@@ -22,25 +22,23 @@ const fileTypeMap = {
 // Handle filename before saving
 chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
   try {
-    // Try to use tab URL if possible
     let domainToUse = lastDomain || 'Unknown';
     let faviconToUse = lastFavicon || '';
     
+    // Compute domain sync first
+    if (downloadItem.finalUrl) {
+      try {
+        domainToUse = new URL(downloadItem.finalUrl).hostname;
+      } catch (e) {}
+    }
     if (downloadItem.tabId >= 0) {
       chrome.tabs.get(downloadItem.tabId, (tab) => {
-        if (chrome.runtime.lastError || !tab || !tab.url) {
-          // Fallback on error/no tab
-          processDownload(downloadItem, suggest, domainToUse, faviconToUse);
-          return;
+        if (!chrome.runtime.lastError && tab?.url) {
+          try {
+            domainToUse = new URL(tab.url).hostname;
+          } catch (e) {}
         }
-        try {
-          const urlObj = new URL(tab.url);
-          domainToUse = urlObj.hostname;
-        } catch (e) {
-          // Invalid URL
-        }
-        faviconToUse = lastFavicon || '';
-        // Load user prefs for dynamic path
+        // Single prefs load & suggest
         chrome.storage.sync.get({
           folderPattern: 'domain_date',
           nestedSubfolders: true
@@ -48,28 +46,21 @@ chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
           processDownload(downloadItem, suggest, domainToUse, faviconToUse, prefs);
         });
       });
-    } else {
-      // Fallback for non-tab downloads or URL fallback
-      if (downloadItem.finalUrl) {
-        try {
-          const urlObj = new URL(downloadItem.finalUrl);
-          domainToUse = urlObj.hostname;
-        } catch (e) {
-          // Invalid URL
-        }
-      }
-      // Load user prefs for dynamic path
-      chrome.storage.sync.get({
-        folderPattern: 'domain_date',
-        nestedSubfolders: true
-      }, (prefs) => {
-        processDownload(downloadItem, suggest, domainToUse, faviconToUse, prefs);
-      });
+      return;
     }
+    
+    // Non-tab: direct prefs load
+    chrome.storage.sync.get({
+      folderPattern: 'domain_date',
+      nestedSubfolders: true
+    }, (prefs) => {
+      processDownload(downloadItem, suggest, domainToUse, faviconToUse, prefs);
+    });
   } catch (err) {
     console.error('Download error:', err);
-    suggest(); // Fallback to default behavior
+    suggest();
   }
+  return true; // Allow async suggest
 });
 
 function sanitize(str) {
