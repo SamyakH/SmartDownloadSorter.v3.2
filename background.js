@@ -39,9 +39,10 @@ chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
           } catch (e) {}
         }
         // Single prefs load & suggest
-        chrome.storage.sync.get({
+       chrome.storage.sync.get({
           folderPattern: 'domain_date',
-          nestedSubfolders: true
+          nestedSubfolders: true,
+          notifications: true
         }, (prefs) => {
           processDownload(downloadItem, suggest, domainToUse, faviconToUse, prefs);
         });
@@ -52,7 +53,8 @@ chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
     // Non-tab: direct prefs load
     chrome.storage.sync.get({
       folderPattern: 'domain_date',
-      nestedSubfolders: true
+      nestedSubfolders: true,
+      notifications: true
     }, (prefs) => {
       processDownload(downloadItem, suggest, domainToUse, faviconToUse, prefs);
     });
@@ -64,11 +66,14 @@ chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
 });
 
 function sanitize(str) {
-  return str.replace(/[<>:"/\\\\|?*]/g, '_').substring(0, 100);
+  return String(str || '')
+    .replace(/[<>:"/\\\\|?*]/g, '_')
+    .substring(0, 100);
 }
 
 function processDownload(downloadItem, suggest, domain, faviconUrl, prefs = {}) {
-  const dateStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  const now = new Date();
+  const dateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD
   
   // Determine file type folder
   let typeFolder = 'Others';
@@ -113,8 +118,8 @@ function processDownload(downloadItem, suggest, domain, faviconUrl, prefs = {}) 
         domain: safeDomain,
         folder: parts.slice(0, -1).join('/'),
         typeFolder,
-        date: new Date().toISOString(),
-        time: new Date().toLocaleTimeString(),
+        date: now.toISOString(),
+        time: now.toLocaleTimeString(),
         url: downloadItem.finalUrl || downloadItem.url || '',
         tabId: downloadItem.tabId || null,
         favicon: faviconUrl,
@@ -128,15 +133,13 @@ function processDownload(downloadItem, suggest, domain, faviconUrl, prefs = {}) 
       });
     });
 
-  // Show notification
-  chrome.storage.sync.get({ notifications: true }, notifPrefs => {
-    if (notifPrefs.notifications) {
-      chrome.notifications.create('dl-notify-' + Date.now(), {
-        type: "basic",
-        iconUrl: "icon.png",
-        title: "Download Organized",
-        message: `Saved to: ${newPath.substring(0, 50)}...`
-      });
-    }
-  });
+  // Show notification using prefs already loaded
+  if (prefs.notifications !== false) {
+    chrome.notifications.create('dl-notify-' + Date.now(), {
+      type: "basic",
+      iconUrl: "icon.png",
+      title: "Download Organized",
+      message: `Saved to: ${newPath.substring(0, 80)}`
+    });
+  }
 }

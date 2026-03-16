@@ -7,8 +7,7 @@
     "downloads",
     "tabs",
     "storage",
-    "notifications",
-    "scripting"
+    "notifications"
   ],
   "action": {
     "default_popup": "options.html"
